@@ -1,57 +1,144 @@
-# Sample Hardhat 3 Project (`mocha` and `ethers`)
+# Blockchain Supply Chain Tracking
 
-This project showcases a Hardhat 3 project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+A blockchain-based supply chain tracking system built with **Hardhat 3**, **Solidity**, **React** and **ethers.js**. The system tracks product status through the supply chain, records all transactions on-chain, and verifies whether product data has been tampered with.
 
-To learn more about Hardhat 3, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3](https://hardhat.org/hardhat3-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+> **PTIT — Advanced Information Security Demo 2026**
 
-## Project Overview
+## Features
 
-This example project includes:
+- **Product Registration** — Create products with a unique hash fingerprint stored on blockchain
+- **Status Tracking** — Track products through 4 stages: Created → Shipped → Received → Sold
+- **Role-based Access** — Only authorized participants (Manufacturer, Distributor, Retailer) can update status
+- **Tamper Detection** — Verify product authenticity by comparing hash values on-chain
+- **Audit Trail** — Full history of every status change with who, where, and when
+- **React Frontend** — Interactive UI to interact with the smart contract
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+## Tech Stack
 
-## Usage
+| Layer | Technology |
+|---|---|
+| Smart Contract | Solidity 0.8.28 |
+| Development | Hardhat 3 |
+| Frontend | React 19 + Vite |
+| Blockchain Interaction | ethers.js v6 |
+| Local Blockchain | Hardhat Node (EDR) |
 
-### Running Tests
+## Project Structure
 
-To run all the tests in the project, execute the following command:
-
-```shell
-npx hardhat test
+```
+├── contracts/
+│   └── SupplyChainTracker.sol    # Smart contract
+├── scripts/
+│   ├── deploy-supplychain-ui.ts  # Deploy & export ABI for frontend
+│   └── supply-chain-demo.ts     # CLI demo (full flow in terminal)
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx               # Main React component
+│   │   ├── App.css               # Styles (dark mode, glassmorphism)
+│   │   ├── contract-info.json    # Auto-generated: contract address + ABI
+│   │   └── main.jsx              # Entry point
+│   ├── package.json
+│   └── vite.config.js
+├── hardhat.config.ts
+└── package.json
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+## Prerequisites
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
+- **Node.js** >= 22.13.0
+- **npm** >= 10
+
+## Getting Started
+
+### 1. Install dependencies
+
+```bash
+# Install Hardhat dependencies
+npm install
+
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
 ```
 
-### Make a deployment to Sepolia
+### 2. Compile the smart contract
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+```bash
+npx hardhat compile
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+### Quick Test (CLI only)
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+Run the full supply chain flow in terminal without UI:
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+```bash
+npx hardhat run scripts/supply-chain-demo.ts
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+### Full Demo (with Frontend UI)
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+Open **3 terminals**:
+
+**Terminal 1** — Start local blockchain:
+```bash
+npx hardhat node
 ```
+
+**Terminal 2** — Deploy contract:
+```bash
+npx hardhat run scripts/deploy-supplychain-ui.ts --network localhost
+```
+
+**Terminal 3** — Start frontend:
+```bash
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:5173` and click buttons **in order**:
+
+1. **Authorize Participants** — Grant access to Distributor & Retailer
+2. **Create Product** — Register a new product on blockchain
+3. **Update to Shipped** — Distributor ships the product
+4. **Update to Received** — Retailer receives the product
+5. **Verify Product** — Compare original vs tampered hash
+6. **View History** — See full audit trail on blockchain
+
+## Smart Contract Overview
+
+### SupplyChainTracker.sol
+
+| Function | Access | Description |
+|---|---|---|
+| `authorizeParticipant(address)` | Owner only | Grant permission to a participant |
+| `createProduct(name, origin, hash)` | Authorized | Register a new product |
+| `updateStatus(id, status, location)` | Authorized | Update product status (forward only) |
+| `verifyProduct(id, hash)` | Anyone | Verify product authenticity |
+| `getProduct(id)` | Anyone | Get product information |
+| `getHistoryCount(id)` | Anyone | Get number of history records |
+| `getHistoryRecord(id, index)` | Anyone | Get a specific history record |
+
+### Product Status Flow
+
+```
+Created (Manufacturer) → Shipped (Distributor) → Received (Retailer) → Sold (Customer)
+```
+
+Status can only move **forward** — no rollbacks allowed.
+
+## How Tamper Detection Works
+
+```
+Original: "Product: PTIT Laptop | Serial: PTIT-2026-001 | Origin: Hanoi Factory"
+  → keccak256 hash → 0x7f3a8b... → stored on blockchain
+
+Tampered: "Product: FAKE PTIT Laptop | Serial: PTIT-2026-001 | Origin: Unknown"
+  → keccak256 hash → 0xe91c4d... → does NOT match → verification fails
+```
+
+Changing even **one character** produces a completely different hash → tampering is immediately detected.
+
+## License
+
+MIT
